@@ -1,0 +1,6 @@
+{
+  "name": "Álbum de Fichas de Ships y Fandoms",
+  "description": "Plantilla interactiva para crear, personalizar, ordenar y exportar fichas de fandoms y ships con fotos, música y paletas de color.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

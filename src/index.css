@@ -1,0 +1,132 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --paper: #fbf6ee;
+  --paper2: #fffdf8;
+  --tx: #4a3b5c;
+  --line: #dccfb8;
+  --tape: rgba(244, 185, 207, 0.8);
+  --tape2: rgba(191, 227, 214, 0.8);
+  --sh: rgba(0, 0, 0, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #2b2533;
+    --paper2: #352e40;
+    --tx: #f0e8fa;
+    --line: #4a4158;
+    --sh: rgba(0, 0, 0, 0.35);
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #2b2533;
+  --paper2: #352e40;
+  --tx: #f0e8fa;
+  --line: #4a4158;
+  --sh: rgba(0, 0, 0, 0.35);
+}
+
+body {
+  margin: 0;
+  color: var(--tx);
+  font-family: 'Patrick Hand', cursive, system-ui, sans-serif;
+  font-size: 19px;
+  background-color: var(--paper);
+  background-image: radial-gradient(var(--line) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
+  min-height: 100vh;
+}
+
+/* Washi tape header ornament */
+.washi-title {
+  display: inline-block;
+  position: relative;
+  font-weight: 400;
+  font-size: 38px;
+  padding: 6px 36px;
+  background: var(--paper2);
+  box-shadow: 0 3px 8px var(--sh);
+  transform: rotate(-1.2deg);
+}
+
+.washi-title::before,
+.washi-title::after {
+  content: "";
+  position: absolute;
+  top: -10px;
+  width: 70px;
+  height: 24px;
+  background: var(--tape);
+  transform: rotate(-8deg);
+}
+
+.washi-title::before {
+  left: -26px;
+}
+
+.washi-title::after {
+  right: -26px;
+  transform: rotate(7deg);
+  background: var(--tape2);
+}
+
+/* Scrapbook note container */
+.scrap-note {
+  position: relative;
+  background: var(--paper2);
+  padding: 20px 18px;
+  box-shadow: 0 4px 12px var(--sh);
+  border-radius: 6px;
+}
+
+.scrap-note::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 84px;
+  height: 24px;
+  margin-left: -42px;
+  background: var(--tape);
+  transform: rotate(-3deg);
+  pointer-events: none;
+}
+
+.scrap-note.alt-tape::before {
+  background: var(--tape2);
+  transform: rotate(3deg);
+}
+
+/* Board layout */
+.board-container {
+  container-type: inline-size;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.board-card {
+  --px: calc(100cqw / 1312);
+  --ink: #5b3f86;
+  --prin: #dcc8f5;
+  --card: #fcf3f2;
+  --field: #ead3ea;
+  --acc: #f4a9c0;
+  --lav: var(--prin);
+  --ff: 'Patrick Hand';
+  position: relative;
+  aspect-ratio: 1312 / 1199;
+  filter: drop-shadow(0 8px 16px var(--sh));
+  user-select: none;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 3px solid #b08fd8;
+  outline-offset: 2px;
+}
