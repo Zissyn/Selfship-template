@@ -513,6 +513,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
                         ? 'grabbing'
                         : 'grab'
                       : 'pointer',
+                    touchAction: 'none',
                   }}
                   onPointerDown={(e) => handleSlotPointerDown(e, i as SlotKey)}
                   onWheel={(e) => handleSlotWheel(e, i as SlotKey)}
@@ -630,6 +631,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
                     ? 'grabbing'
                     : 'grab'
                   : 'pointer',
+                touchAction: 'none',
               }}
               onPointerDown={(e) => handleSlotPointerDown(e, 'a')}
               onWheel={(e) => handleSlotWheel(e, 'a')}
@@ -762,6 +764,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
                   ? '0 calc(var(--px) * 12) calc(var(--px) * 24) rgba(0,0,0,0.25)'
                   : '0 calc(var(--px) * 4) calc(var(--px) * 10) rgba(0,0,0,0.16)',
                 border: '1px solid rgba(0, 0, 0, 0.08)',
+                touchAction: 'none',
               }}
               onPointerDown={(e) => handleNotePointerDown(e, note)}
             >
@@ -783,6 +786,7 @@ export const BoardCanvas: React.FC<BoardCanvasProps> = ({
               {/* Note action toolbar (drag handle, cycle color, tilt, delete) */}
               <div
                 className="flex items-center justify-between px-[calc(var(--px)*6)] pt-[calc(var(--px)*10)] pb-[calc(var(--px)*2)] opacity-80 group-hover:opacity-100 transition-opacity"
+                style={{ touchAction: 'none' }}
                 onPointerDown={(e) => handleNotePointerDown(e, note)}
               >
                 {/* Drag indicator icon */}

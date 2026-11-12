@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CardData } from '../types/album';
 import { openAudioPicker } from '../utils/imageUtils';
+import { saveCardAudio, getCardAudio } from '../utils/storageUtils';
 
 interface MusicPlayerProps {
   card: CardData;
@@ -50,6 +51,76 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
     }
   }, []);
 
+  // Restore persistent audio for this card from IndexedDB
+  useEffect(() => {
+    let active = true;
+
+    // Reset current playback state when switching cards
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setIsPlaying(false);
+    setCurrentTime(0);
+
+    getCardAudio(card.id).then(async (saved) => {
+      if (!active) return;
+      if (saved && saved.blob) {
+        if (audioUrl) {
+          URL.revokeObjectURL(audioUrl);
+        }
+        const newUrl = URL.createObjectURL(saved.blob);
+        setAudioUrl(newUrl);
+
+        if (audioRef.current) {
+          audioRef.current.src = newUrl;
+          audioRef.current.load();
+        }
+
+        // Compute peaks from saved audio
+        try {
+          const AudioCtx =
+            window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+          if (AudioCtx) {
+            const ctx = new AudioCtx();
+            const arrayBuffer = await saved.blob.arrayBuffer();
+            const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+            ctx.close();
+
+            const channelData = audioBuffer.getChannelData(0);
+            const step = Math.floor(channelData.length / NBARS);
+            const rawPeaks: number[] = [];
+
+            for (let i = 0; i < NBARS; i++) {
+              let max = 0;
+              for (let j = i * step; j < (i + 1) * step; j += Math.max(1, step >> 9)) {
+                max = Math.max(max, Math.abs(channelData[j]));
+              }
+              rawPeaks.push(max);
+            }
+            const highest = Math.max(...rawPeaks) || 1;
+            if (active) {
+              setPeaks(rawPeaks.map((v) => Math.max(0.18, v / highest)));
+            }
+          }
+        } catch {
+          // Fallback to seeded peaks
+        }
+      } else {
+        setAudioUrl(null);
+        setPeaks(null);
+        if (audioRef.current) {
+          audioRef.current.src = '';
+        }
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [card.id]);
+
   // Update volume
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
@@ -78,7 +149,10 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
           onChange({ pt: songName });
         }
 
-        onToast(`Canción cargada: ${songName}`);
+        // Persist audio in IndexedDB so it never disappears on refresh
+        saveCardAudio(card.id, file, file.name).catch(() => {});
+
+        onToast(`Canción guardada: ${songName} 🎵`);
 
         // Try extracting waveform peaks using Web Audio API
         try {

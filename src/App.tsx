@@ -14,6 +14,7 @@ import { openImagePicker, getImageFromClipboard, processImageFile } from './util
 import { initColorEngine, ColorEngineState } from './utils/colorEngine';
 import { exportCardAsPng, downloadBlobAsFile } from './utils/exportUtils';
 import { FRAME } from './assets/templateAssets';
+import { loadAlbumData, saveAlbumData } from './utils/storageUtils';
 
 interface ToastState {
   message: string;
@@ -22,7 +23,7 @@ interface ToastState {
 }
 
 export default function App() {
-  // 1. Initial State from localStorage
+  // 1. Initial State from Storage (IndexedDB + localStorage fallback)
   const [cards, setCards] = useState<CardData[]>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -62,7 +63,23 @@ export default function App() {
     return null;
   });
 
+  const [mobileTab, setMobileTab] = useState<'canvas' | 'album'>('canvas');
   const [selectedSlot, setSelectedSlot] = useState<SlotKey | null>(null);
+
+  // Load from IndexedDB on initial mount
+  useEffect(() => {
+    let mounted = true;
+    loadAlbumData().then((data) => {
+      if (mounted && data.cards.length > 0) {
+        setCards(data.cards);
+        setCurrentCardId(data.cur);
+        setLastBackup(data.lastBackup);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const [toast, setToast] = useState<ToastState | null>(null);
   const toastTimeoutRef = useRef<number | null>(null);
 
@@ -141,18 +158,11 @@ export default function App() {
     []
   );
 
-  // 3. Save to localStorage
+  // 3. Save to IndexedDB (with localStorage mirror)
   useEffect(() => {
-    try {
-      const payload = {
-        cards,
-        cur: currentCardId,
-        lastBackup,
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-    } catch {
-      showToast('No hay suficiente espacio en el navegador. Guarda una copia (JSON).');
-    }
+    saveAlbumData(cards, currentCardId, lastBackup).catch(() => {
+      showToast('Error al guardar datos. Considera descargar una copia (JSON).');
+    });
   }, [cards, currentCardId, lastBackup, showToast]);
 
   // Card update helper
@@ -434,30 +444,67 @@ export default function App() {
         <p className="mt-2.5 text-base opacity-75">
           Crea, ordena y exporta tus fichas de fandoms y ships
         </p>
+
+        {/* Mobile Navigation Segmented Tabs (Visible on mobile screens) */}
+        <div className="lg:hidden flex items-center justify-center mt-3">
+          <div className="inline-flex bg-[var(--paper2)] p-1 rounded-full border border-[var(--line)] shadow-xs">
+            <button
+              type="button"
+              onClick={() => setMobileTab('canvas')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                mobileTab === 'canvas'
+                  ? 'bg-[#b08fd8] text-white shadow-xs'
+                  : 'text-[var(--tx)] opacity-70 hover:opacity-100'
+              }`}
+            >
+              <span>🎴 Ficha actual</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab('album')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition-all cursor-pointer ${
+                mobileTab === 'album'
+                  ? 'bg-[#b08fd8] text-white shadow-xs'
+                  : 'text-[var(--tx)] opacity-70 hover:opacity-100'
+              }`}
+            >
+              <span>📂 Mis Fichas ({cards.length})</span>
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* Main Content Layout */}
-      <div className="w-full max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-7 items-start flex-1">
-        {/* Left Sidebar */}
-        <CardSidebar
-          cards={cards}
-          currentCardId={currentCardId}
-          onSelectCard={(id) => {
-            setCurrentCardId(id);
-            setSelectedSlot(null);
-          }}
-          onAddCard={handleAddCard}
-          onDuplicateCard={handleDuplicateCard}
-          onDeleteCard={handleDeleteCard}
-          onToggleFavorite={handleToggleFavorite}
-          onReorderCards={(newCards) => setCards(newCards)}
-          onBackup={handleBackup}
-          onImport={handleImport}
-          lastBackup={lastBackup}
-        />
+      <div className="w-full max-w-7xl mx-auto px-4 py-4 lg:py-6 grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-7 items-start flex-1">
+        {/* Left Sidebar (Always visible on desktop, tab-controlled on mobile) */}
+        <div className={mobileTab === 'album' ? 'block' : 'hidden lg:block'}>
+          <CardSidebar
+            cards={cards}
+            currentCardId={currentCardId}
+            onSelectCard={(id) => {
+              setCurrentCardId(id);
+              setSelectedSlot(null);
+              setMobileTab('canvas');
+            }}
+            onAddCard={() => {
+              handleAddCard();
+              setMobileTab('canvas');
+            }}
+            onDuplicateCard={(cardToDup) => {
+              handleDuplicateCard(cardToDup);
+              setMobileTab('canvas');
+            }}
+            onDeleteCard={handleDeleteCard}
+            onToggleFavorite={handleToggleFavorite}
+            onReorderCards={(newCards) => setCards(newCards)}
+            onBackup={handleBackup}
+            onImport={handleImport}
+            lastBackup={lastBackup}
+          />
+        </div>
 
-        {/* Right Main Canvas & Tools */}
-        <main className="w-full min-w-0">
+        {/* Right Main Canvas & Tools (Always visible on desktop, tab-controlled on mobile) */}
+        <main className={`w-full min-w-0 ${mobileTab === 'canvas' ? 'block' : 'hidden lg:block'}`}>
           {/* Interactive Card Board */}
           <BoardCanvas
             card={currentCard}
